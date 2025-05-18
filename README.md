@@ -28,13 +28,13 @@ NyayVaani is an **AI-powered multilingual legal assistance platform** created to
 | Layer            | Technologies Used                                      |
 |------------------|--------------------------------------------------------|
 | 🌐 Frontend      | React.js, Tailwind CSS, Vite                           |
-| 🖥️ Backend       | Node.js, Express.js                                    |
+| 🖥️ Backend       | Node.js,                                   |
 | 🤖 AI/NLP         | OpenAI GPT (Chatbot & Summarization), Whisper API      |
 | 🗣️ Multilingual   | Google Cloud Speech-to-Text, IndicNLP                  |
 | 📃 Document Tools| Python (PyMuPDF, NLTK), PDF.js                         |
-| 🔐 Authentication| Firebase Auth / JWT                                    |
-| 🛢️ Database      | MongoDB / Firebase Firestore                           |
-| ☁️ Hosting       | Vercel / Firebase Hosting / Heroku                     |
+| 🔐 Authentication| SUPABASE                                               |
+| 🛢️ Database      | MongoDB / SUPARBASE                                    |
+| ☁️ Hosting       | Vercel                                                 |
 
 ---
 ![Screenshot 2025-05-19 011009](https://github.com/user-attachments/assets/20d1e0a9-3bfd-4860-90ab-3ae1fa6104e0)
