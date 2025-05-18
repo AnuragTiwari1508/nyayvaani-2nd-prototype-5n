@@ -33,7 +33,7 @@ NyayVaani is an **AI-powered multilingual legal assistance platform** created to
 | 🗣️ Multilingual   | Google Cloud Speech-to-Text, IndicNLP                  |
 | 📃 Document Tools| Python (PyMuPDF, NLTK), PDF.js                         |
 | 🔐 Authentication| SUPABASE                                               |
-| 🛢️ Database      | MongoDB / SUPARBASE                                    |
+| 🛢️ Database      | MongoDB / SUPABASE                                    |
 | ☁️ Hosting       | Vercel                                                 |
 
 ---
