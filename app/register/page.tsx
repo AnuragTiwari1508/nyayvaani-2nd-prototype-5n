@@ -2,15 +2,16 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Shield, User } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Loader2, Shield, User, AlertCircle } from "lucide-react"
 import { motion } from "framer-motion"
 import { useToast } from "@/hooks/use-toast"
-import { createClientSupabaseClient } from "@/lib/supabase"
+import { createClient } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -22,14 +23,25 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [debugInfo, setDebugInfo] = useState<any>(null)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [supabaseUrl, setSupabaseUrl] = useState("")
+  const [supabaseKey, setSupabaseKey] = useState("")
   const { toast } = useToast()
   const router = useRouter()
-  const supabase = createClientSupabaseClient()
+
+  // Get environment variables from window
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || "")
+      setSupabaseKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")
+    }
+  }, [])
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setDebugInfo(null)
+    setConnectionError(null)
 
     // Validate passwords match
     if (password !== confirmPassword) {
@@ -43,6 +55,24 @@ export default function RegisterPage() {
     }
 
     try {
+      // Create a new Supabase client directly to avoid singleton issues
+      const supabase = createClient(supabaseUrl, supabaseKey)
+
+      // First, test the connection
+      try {
+        const { error: pingError } = await supabase.from("notifications").select("count()", { count: "exact" }).limit(1)
+
+        if (pingError) {
+          setConnectionError(`Connection test failed: ${pingError.message}`)
+          throw new Error(`Connection test failed: ${pingError.message}`)
+        }
+      } catch (pingError) {
+        setConnectionError(
+          `Connection test failed: ${pingError instanceof Error ? pingError.message : "Unknown error"}`,
+        )
+        throw pingError
+      }
+
       // Register user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -113,6 +143,21 @@ export default function RegisterPage() {
             </p>
           </div>
         </motion.div>
+
+        {connectionError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Connection Error</AlertTitle>
+            <AlertDescription>
+              {connectionError}
+              <div className="mt-2">
+                <Link href="/test-connection" className="text-white underline">
+                  Run connection test
+                </Link>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader>
