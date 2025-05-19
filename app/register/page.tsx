@@ -21,6 +21,7 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [debugInfo, setDebugInfo] = useState<any>(null)
   const { toast } = useToast()
   const router = useRouter()
   const supabase = createClientSupabaseClient()
@@ -28,6 +29,7 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setDebugInfo(null)
 
     // Validate passwords match
     if (password !== confirmPassword) {
@@ -57,16 +59,24 @@ export default function RegisterPage() {
         throw error
       }
 
+      setDebugInfo({ authData: data })
+
       // Create user profile
       if (data.user) {
-        const { error: profileError } = await supabase.from("user_profiles").insert({
-          id: data.user.id,
-          full_name: fullName,
-          phone_number: phone,
-        })
+        const { data: profileData, error: profileError } = await supabase
+          .from("user_profiles")
+          .insert({
+            id: data.user.id,
+            full_name: fullName,
+            phone_number: phone,
+          })
+          .select()
 
         if (profileError) {
           console.error("Error creating user profile:", profileError)
+          setDebugInfo((prev) => ({ ...prev, profileError }))
+        } else {
+          setDebugInfo((prev) => ({ ...prev, profileData }))
         }
       }
 
@@ -75,8 +85,12 @@ export default function RegisterPage() {
         description: "Your account has been created. Please check your email for verification.",
       })
 
-      router.push("/login")
+      // Wait a moment before redirecting
+      setTimeout(() => {
+        router.push("/login")
+      }, 2000)
     } catch (error: any) {
+      setDebugInfo({ error })
       toast({
         variant: "destructive",
         title: "Registration failed",
@@ -181,6 +195,15 @@ export default function RegisterPage() {
                 </Button>
               </div>
             </form>
+
+            {debugInfo && (
+              <div className="mt-4 p-2 bg-muted rounded-md">
+                <details>
+                  <summary className="cursor-pointer text-xs font-medium">Debug Information</summary>
+                  <pre className="mt-2 text-xs overflow-auto max-h-40">{JSON.stringify(debugInfo, null, 2)}</pre>
+                </details>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-muted-foreground">
