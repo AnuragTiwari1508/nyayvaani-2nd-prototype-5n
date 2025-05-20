@@ -1,28 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, CheckCircle, AlertCircle, Globe } from "lucide-react"
-import { createClient } from "@supabase/supabase-js"
 
 export default function TestConnectionPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [testResult, setTestResult] = useState<"idle" | "success" | "error">("idle")
   const [errorMessage, setErrorMessage] = useState("")
-  const [supabaseUrl, setSupabaseUrl] = useState("")
-  const [supabaseKey, setSupabaseKey] = useState("")
   const [debugInfo, setDebugInfo] = useState<any>(null)
-
-  // Get environment variables from window
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // These will only be available if you expose them to the client
-      setSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || "")
-      setSupabaseKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "")
-    }
-  }, [])
 
   const handleTestConnection = async () => {
     setIsLoading(true)
@@ -31,21 +19,29 @@ export default function TestConnectionPage() {
     setDebugInfo(null)
 
     try {
-      // Create a new Supabase client directly
-      const supabase = createClient(supabaseUrl, supabaseKey)
+      // Use the server-side proxy instead of direct Supabase connection
+      const response = await fetch("/api/supabase-proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "testConnection",
+          params: {},
+        }),
+      })
 
-      // Test a simple query that doesn't require authentication
-      const { data, error } = await supabase.from("notifications").select("count()", { count: "exact" })
-
-      if (error) {
-        throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Server returned an error")
       }
+
+      const data = await response.json()
 
       setDebugInfo({
         connectionSuccess: true,
         data,
-        supabaseUrl: supabaseUrl.replace(/^(https?:\/\/[^/]+).*$/, "$1"), // Only show the domain for security
-        keyFirstChars: supabaseKey.substring(0, 5) + "..." + supabaseKey.substring(supabaseKey.length - 5),
+        responseStatus: response.status,
       })
 
       setTestResult("success")
@@ -56,8 +52,6 @@ export default function TestConnectionPage() {
       setDebugInfo({
         connectionError: true,
         errorObject: error,
-        supabaseUrl: supabaseUrl.replace(/^(https?:\/\/[^/]+).*$/, "$1"), // Only show the domain for security
-        keyFirstChars: supabaseKey.substring(0, 5) + "..." + supabaseKey.substring(supabaseKey.length - 5),
       })
     } finally {
       setIsLoading(false)
@@ -71,28 +65,19 @@ export default function TestConnectionPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              Supabase Connection Test
+              Supabase Connection Test (Server-Side)
             </CardTitle>
-            <CardDescription>Test basic connectivity to your Supabase instance</CardDescription>
+            <CardDescription>Test connectivity to Supabase via server-side API route</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <p>
-                This test will check if your application can connect to Supabase using the environment variables you've
-                configured.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Current Supabase URL: {supabaseUrl ? supabaseUrl.replace(/^(https?:\/\/[^/]+).*$/, "$1") : "Not set"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Current Anon Key:{" "}
-                {supabaseKey
-                  ? supabaseKey.substring(0, 5) + "..." + supabaseKey.substring(supabaseKey.length - 5)
-                  : "Not set"}
+                This test will check if your server can connect to Supabase using a server-side API route. This bypasses
+                CORS restrictions that might affect client-side connections.
               </p>
             </div>
 
-            <Button onClick={handleTestConnection} disabled={isLoading || !supabaseUrl || !supabaseKey}>
+            <Button onClick={handleTestConnection} disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -107,7 +92,7 @@ export default function TestConnectionPage() {
               <Alert className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900">
                 <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                 <AlertTitle>Success</AlertTitle>
-                <AlertDescription>Successfully connected to Supabase!</AlertDescription>
+                <AlertDescription>Successfully connected to Supabase via server-side API!</AlertDescription>
               </Alert>
             )}
 

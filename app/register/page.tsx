@@ -11,7 +11,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, Shield, User, AlertCircle } from "lucide-react"
 import { motion } from "framer-motion"
 import { useToast } from "@/hooks/use-toast"
-import { createClient } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -55,60 +54,27 @@ export default function RegisterPage() {
     }
 
     try {
-      // Create a new Supabase client directly to avoid singleton issues
-      const supabase = createClient(supabaseUrl, supabaseKey)
-
-      // First, test the connection
-      try {
-        const { error: pingError } = await supabase.from("notifications").select("count()", { count: "exact" }).limit(1)
-
-        if (pingError) {
-          setConnectionError(`Connection test failed: ${pingError.message}`)
-          throw new Error(`Connection test failed: ${pingError.message}`)
-        }
-      } catch (pingError) {
-        setConnectionError(
-          `Connection test failed: ${pingError instanceof Error ? pingError.message : "Unknown error"}`,
-        )
-        throw pingError
-      }
-
-      // Register user with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            phone: phone,
-          },
+      // Use our server-side registration API instead of direct Supabase call
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          fullName,
+          email,
+          phone,
+          password,
+        }),
       })
 
-      if (error) {
-        throw error
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed")
       }
 
-      setDebugInfo({ authData: data })
-
-      // Create user profile
-      if (data.user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from("user_profiles")
-          .insert({
-            id: data.user.id,
-            full_name: fullName,
-            phone_number: phone,
-          })
-          .select()
-
-        if (profileError) {
-          console.error("Error creating user profile:", profileError)
-          setDebugInfo((prev) => ({ ...prev, profileError }))
-        } else {
-          setDebugInfo((prev) => ({ ...prev, profileData }))
-        }
-      }
+      setDebugInfo({ registrationData: data })
 
       toast({
         title: "Registration successful",
@@ -120,7 +86,7 @@ export default function RegisterPage() {
         router.push("/login")
       }, 2000)
     } catch (error: any) {
-      setDebugInfo({ error })
+      setDebugInfo({ error: error.message })
       toast({
         variant: "destructive",
         title: "Registration failed",
